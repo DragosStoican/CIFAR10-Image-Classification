@@ -25,21 +25,21 @@ class Net(nn.Module):
     def __init__(self):
         super().__init__()
         self.features = nn.Sequential(      
-            nn.Conv2d(in_channels=3, out_channels=32,kernel_size=3, padding=1), nn.BatchNorm2d(num_features=32), nn.Relu(),
-            nn.Conv2d(in_channels=32, out_channels=32, kernel_size=3, padding=1), nn.BatchNorm2d(num_features=32), nn.Relu(),
-            nn.Conv2d(in_channels=32, out_channels=32, kernel_size=3, padding=1), nn.BatchNorm2d(num_features=32), nn.Relu(),
+            nn.Conv2d(in_channels=3, out_channels=32,kernel_size=3, padding=1), nn.BatchNorm2d(num_features=32), nn.ReLU(),
+            nn.Conv2d(in_channels=32, out_channels=32, kernel_size=3, padding=1), nn.BatchNorm2d(num_features=32), nn.ReLU(),
+            nn.Conv2d(in_channels=32, out_channels=32, kernel_size=3, padding=1), nn.BatchNorm2d(num_features=32), nn.ReLU(),
             nn.MaxPool2d(kernel_size=2, stride=2), nn.Dropout(p=0.2),
-            nn.Conv2d(in_channels=32, out_channels=64, kernel_size=3, padding=1), nn.BatchNorm2d(num_features=64), nn.Relu(), 
-            nn.Conv2d(in_channels=64, out_channels=64, kernel_size=3, padding=1), nn.BatchNorm2d(num_features=64), nn.Relu(), 
-            nn.Conv2d(in_channels=64, out_channels=64, kernel_size=3, padding=1), nn.BatchNorm2d(num_features=64), nn.Relu(), 
+            nn.Conv2d(in_channels=32, out_channels=64, kernel_size=3, padding=1), nn.BatchNorm2d(num_features=64), nn.ReLU(), 
+            nn.Conv2d(in_channels=64, out_channels=64, kernel_size=3, padding=1), nn.BatchNorm2d(num_features=64), nn.ReLU(), 
+            nn.Conv2d(in_channels=64, out_channels=64, kernel_size=3, padding=1), nn.BatchNorm2d(num_features=64), nn.ReLU(), 
             nn.MaxPool2d(kernel_size=2, stride=2), nn.Dropout(p=0.3),
-            nn.Conv2d(in_channels=64, out_channels=128, kernel_size=3, padding=1), nn.BatchNorm2d(num_features=128), nn.Relu(),
-            nn.Conv2d(in_channels=128, out_channels=128, kernel_size=3, padding=1), nn.BatchNorm2d(num_features=128), nn.Relu(),
-            nn.Conv2d(in_channels=128, out_channels=128, kernel_size=3, padding=1), nn.BatchNorm2d(num_features=128), nn.Relu(),
+            nn.Conv2d(in_channels=64, out_channels=128, kernel_size=3, padding=1), nn.BatchNorm2d(num_features=128), nn.ReLU(),
+            nn.Conv2d(in_channels=128, out_channels=128, kernel_size=3, padding=1), nn.BatchNorm2d(num_features=128), nn.ReLU(),
+            nn.Conv2d(in_channels=128, out_channels=128, kernel_size=3, padding=1), nn.BatchNorm2d(num_features=128), nn.ReLU(),
             nn.MaxPool2d(kernel_size=2, stride=2), nn.Dropout(p=0.4),
-            nn.Conv2d(in_channels=128, out_channels=256, kernel_size=3, padding=1), nn.BatchNorm2d(num_features=256), nn.Relu(),
-            nn.Conv2d(in_channels=256, out_channels=256, kernel_size=3, padding=1), nn.BatchNorm2d(num_features=256), nn.Relu(),
-            nn.Conv2d(in_channels=256, out_channels=256, kernel_size=3, padding=1), nn.BatchNorm2d(num_features=256), nn.Relu(),
+            nn.Conv2d(in_channels=128, out_channels=256, kernel_size=3, padding=1), nn.BatchNorm2d(num_features=256), nn.ReLU(),
+            nn.Conv2d(in_channels=256, out_channels=256, kernel_size=3, padding=1), nn.BatchNorm2d(num_features=256), nn.ReLU(),
+            nn.Conv2d(in_channels=256, out_channels=256, kernel_size=3, padding=1), nn.BatchNorm2d(num_features=256), nn.ReLU(),
             nn.MaxPool2d(kernel_size=2, stride=2), nn.Dropout(p=0.5),
             nn.Flatten(),
             nn.Linear(in_features=256 * 2 * 2, out_features=128), nn.ReLU(),
@@ -85,10 +85,16 @@ net = Net().to(DEVICE)
 
 trainAccuracyList = [0]
 testAccuracyList = [0]
+lossRates = [1]
 epochs = [0]
 fig = plt.figure()
 ax = plt.subplot()
 plt.ylim([0, 100])
+ax.plot(epochs, trainAccuracyList, color="blue", label="Train Accuracy (%)")
+ax.plot(epochs, testAccuracyList, color="orange", label="Test Accuracy (%)")
+ax.plot(epochs, lossRates, color="green", label="loss (100 * (1-loss))")
+plt.legend(loc="upper left")
+fig.savefig('plot.png')
 
 if args.r:
     try: os.remove(PATH)
@@ -125,9 +131,11 @@ if args.t or not os.path.isfile(PATH):
 
         trainAccuracyList.append(trainAccuracy)
         testAccuracyList.append(accuracy)
+        lossRates.append(100 * (1 - loss.item()))
         epochs.append(epoch+1)
-        ax.plot(epochs, trainAccuracyList, color="blue")
-        ax.plot(epochs, testAccuracyList, color="orange")
+        ax.plot(epochs, trainAccuracyList, color="blue", label="Train Accuracy (%)")
+        ax.plot(epochs, testAccuracyList, color="orange", label="Test Accuracy (%)")
+        ax.plot(epochs, lossRates, color="green", label="loss (100 * (1-loss))")
         fig.savefig('plot.png')
 
         print(f"Epoch {epoch+1} completed in {round(time.time() - start, 2)} seconds")
