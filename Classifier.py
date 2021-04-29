@@ -25,21 +25,21 @@ class Net(nn.Module):
     def __init__(self):
         super().__init__()
         self.features = nn.Sequential(      
-            nn.Conv2d(in_channels=3, out_channels=32,kernel_size=3, padding=1), nn.ReLU(), nn.BatchNorm2d(num_features=32),
-            nn.Conv2d(in_channels=32, out_channels=32, kernel_size=3, padding=1), nn.ReLU(), nn.BatchNorm2d(num_features=32),
-            nn.Conv2d(in_channels=32, out_channels=32, kernel_size=3, padding=1), nn.ReLU(), nn.BatchNorm2d(num_features=32),
+            nn.Conv2d(in_channels=3, out_channels=32,kernel_size=3, padding=1), nn.BatchNorm2d(num_features=32), nn.relu(),
+            nn.Conv2d(in_channels=32, out_channels=32, kernel_size=3, padding=1), nn.BatchNorm2d(num_features=32), nn.relu(),
+            nn.Conv2d(in_channels=32, out_channels=32, kernel_size=3, padding=1), nn.BatchNorm2d(num_features=32), nn.relu(),
             nn.MaxPool2d(kernel_size=2, stride=2), nn.Dropout(p=0.2),
-            nn.Conv2d(in_channels=32, out_channels=64, kernel_size=3, padding=1), nn.ReLU(), nn.BatchNorm2d(num_features=64), 
-            nn.Conv2d(in_channels=64, out_channels=64, kernel_size=3, padding=1), nn.ReLU(), nn.BatchNorm2d(num_features=64), 
-            nn.Conv2d(in_channels=64, out_channels=64, kernel_size=3, padding=1), nn.ReLU(), nn.BatchNorm2d(num_features=64), 
+            nn.Conv2d(in_channels=32, out_channels=64, kernel_size=3, padding=1), nn.BatchNorm2d(num_features=64), nn.relu(), 
+            nn.Conv2d(in_channels=64, out_channels=64, kernel_size=3, padding=1), nn.BatchNorm2d(num_features=64), nn.relu(), 
+            nn.Conv2d(in_channels=64, out_channels=64, kernel_size=3, padding=1), nn.BatchNorm2d(num_features=64), nn.relu(), 
             nn.MaxPool2d(kernel_size=2, stride=2), nn.Dropout(p=0.3),
-            nn.Conv2d(in_channels=64, out_channels=128, kernel_size=3, padding=1), nn.ReLU(), nn.BatchNorm2d(num_features=128),
-            nn.Conv2d(in_channels=128, out_channels=128, kernel_size=3, padding=1), nn.ReLU(), nn.BatchNorm2d(num_features=128),
-            nn.Conv2d(in_channels=128, out_channels=128, kernel_size=3, padding=1), nn.ReLU(), nn.BatchNorm2d(num_features=128),
+            nn.Conv2d(in_channels=64, out_channels=128, kernel_size=3, padding=1), nn.BatchNorm2d(num_features=128), nn.relu(),
+            nn.Conv2d(in_channels=128, out_channels=128, kernel_size=3, padding=1), nn.BatchNorm2d(num_features=128), nn.relu(),
+            nn.Conv2d(in_channels=128, out_channels=128, kernel_size=3, padding=1), nn.BatchNorm2d(num_features=128), nn.relu(),
             nn.MaxPool2d(kernel_size=2, stride=2), nn.Dropout(p=0.4),
-            nn.Conv2d(in_channels=128, out_channels=256, kernel_size=3, padding=1), nn.ReLU(), nn.BatchNorm2d(num_features=256),
-            nn.Conv2d(in_channels=256, out_channels=256, kernel_size=3, padding=1), nn.ReLU(), nn.BatchNorm2d(num_features=256),
-            nn.Conv2d(in_channels=256, out_channels=256, kernel_size=3, padding=1), nn.ReLU(), nn.BatchNorm2d(num_features=256),
+            nn.Conv2d(in_channels=128, out_channels=256, kernel_size=3, padding=1), nn.BatchNorm2d(num_features=256), nn.relu(),
+            nn.Conv2d(in_channels=256, out_channels=256, kernel_size=3, padding=1), nn.BatchNorm2d(num_features=256), nn.relu(),
+            nn.Conv2d(in_channels=256, out_channels=256, kernel_size=3, padding=1), nn.BatchNorm2d(num_features=256), nn.relu(),
             nn.MaxPool2d(kernel_size=2, stride=2), nn.Dropout(p=0.5),
             nn.Flatten(),
             nn.Linear(in_features=256 * 2 * 2, out_features=128), nn.ReLU(),
@@ -65,15 +65,20 @@ def testModel(model, testLoader):
 
 
 transform = transforms.Compose([
-    transforms.RandomHorizontalFlip(),
     transforms.ToTensor(),
-    transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
+    transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
+    transforms.RandomChoice([
+        transforms.RandomAffine(0, (0.2, 0.2)),
+        transforms.RandomRotation(90),
+        transforms.RandomHorizontalFlip(),
+        transforms.RandomVerticalFlip()
+    ])
 ])
 
 trainset = torchvision.datasets.CIFAR10(root=f"{sys.path[0]}/data", train=True, download=True, transform=transform)
 trainloader = torch.utils.data.DataLoader(trainset, batch_size=BATCH_SIZE, shuffle=True, num_workers=0)
 
-testset = torchvision.datasets.CIFAR10(root=f"{sys.path[0]}/data", train=False, download=True, transform=transform)
+testset = torchvision.datasets.CIFAR10(root=f"{sys.path[0]}/data", train=False, download=True, transform=transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))]))
 testloader = torch.utils.data.DataLoader(testset, batch_size=BATCH_SIZE, shuffle=False, num_workers=0)
 
 net = Net().to(DEVICE)
@@ -152,3 +157,4 @@ with torch.no_grad():
 print("Object : Accuracy")
 for i in range(10):
     print(" %5s : %2d %%" % (CLASSES[i], 100 * classCorrect[i] / classTotal[i]))
+    
