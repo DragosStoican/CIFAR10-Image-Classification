@@ -42,10 +42,9 @@ class Net(nn.Module):
         return items
     
     def createLayers(self):
-        layers = self.createConvLayer(3, 32, 3, 0.2)
-        layers.extend(self.createConvLayer(32, 64, 3, 0.3))
-        layers.extend(self.createConvLayer(64, 128, 3, 0.4))
-        layers.extend(self.createConvLayer(128, 256, 3, 0.5))
+        layers = []
+        for param in [(3, 32, 2, 0.2), (32, 64, 2, 0.3), (64, 128, 3, 0.4), (128, 256, 3, 0.4)]:
+            layers.extend(self.createConvLayer(*param))
         layers.extend([
             nn.Flatten(),
             nn.Linear(in_features=256 * 2 * 2, out_features=128), nn.ReLU(),
@@ -135,7 +134,7 @@ if args.t or not os.path.isfile(PATH):
 
         trainAccuracyList.append(trainAccuracy)
         testAccuracyList.append(accuracy)
-        lossRates.append(loss.item())
+        lossRates.append(100 * (1-loss.item()))
         epochs.append(epoch+1)
         ax.plot(epochs, trainAccuracyList, color="blue", label="Train Accuracy (%)")
         ax.plot(epochs, testAccuracyList, color="orange", label="Test Accuracy (%)")
