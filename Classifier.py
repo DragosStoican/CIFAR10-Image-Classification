@@ -20,7 +20,7 @@ PATH = f"{sys.path[0]}\\cifar_net.pth"
 PROGRESS_DATA = f"{sys.path[0]}\\progress.bin"
 PROGRESS_GRAPH = f"{sys.path[0]}\\plot.png"
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-MAX_EPOCHS = 500
+MAX_EPOCHS = 200
 BATCH_SIZE = 64
 CLASSES = ("plane", "car", "bird", "cat", "deer", "dog", "frog", "horse", "ship", "truck")
 
@@ -28,7 +28,7 @@ class Net(nn.Module):
 
     def __init__(self):
         super().__init__()
-        self.features = self.createLayers([(3, 32, 2, 0.2), (32, 64, 2, 0.3), (64, 128, 3, 0.4), (128, 256, 3, 0.4)])
+        self.features = self.createLayers([(3, 64, 3, 0.2), (64, 128, 3, 0.3), (128, 256, 3, 0.4), (256, 512, 4, 0.5)])
 
     def forward(self, x):
         x = self.features(x)
@@ -42,7 +42,8 @@ class Net(nn.Module):
             items.append(nn.ReLU())
             in_channels = out_channels
         items.append(nn.MaxPool2d(kernel_size=2, stride=2))
-        items.append(nn.Dropout(p=dropout))
+        if dropout != 0:    
+            items.append(nn.Dropout(p=dropout))
         return items
     
     def createLayers(self, design):
@@ -51,7 +52,7 @@ class Net(nn.Module):
             layers.extend(self.createConvLayer(*param))
         layers.extend([
             nn.Flatten(),
-            nn.Linear(in_features=256 * 2 * 2, out_features=128), nn.ReLU(),
+            nn.Linear(in_features=512 * 2 * 2, out_features=128), nn.ReLU(),
             nn.BatchNorm1d(num_features=128),
             nn.Dropout(p=0.5),
             nn.Linear(in_features=128, out_features=10)
@@ -70,15 +71,17 @@ def testModel(model, testLoader):
             correct += (predicted == labels).sum().item()
     return correct / total
 
+def adjustLearningRate(optimizer):
+    for param_group in optimizer.param_groups:
+        param_group['lr'] *= 0.993
 
 transform = transforms.Compose([
     transforms.ToTensor(),
     transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
     transforms.RandomChoice([
         transforms.RandomAffine(0, (0.2, 0.2)),
-        transforms.RandomRotation(90),
         transforms.RandomHorizontalFlip(),
-        transforms.RandomVerticalFlip()
+        transforms.GaussianBlur(kernel_size=3)
     ])
 ])
 
@@ -99,10 +102,6 @@ fig = plt.figure()
 ax = plt.subplot()
 plt.ylim([0, 100])
 
-
-def adjustLearningRate(optimizer):
-    for param_group in optimizer.param_groups:
-        param_group['lr'] *= 0.993
 
 if args.r:
     for f in [PATH, PROGRESS_DATA, PROGRESS_GRAPH]:
@@ -125,7 +124,7 @@ if args.t or not os.path.isfile(PATH):
     ax.plot(epochs, testAccuracyList, color="orange", label="Test Accuracy (%)")
     ax.plot(epochs, lossRates, color="green", label="loss (100 * (1-loss))")
     plt.legend(loc="upper left")
-    fig.savefig(PROGRESS_GRAPH)
+    fig.savefig(PROGRESS_GRAPH, dpi=300)
 
     trainingStart = time.time()
     bestAccuracy = max(testAccuracyList)
@@ -153,7 +152,7 @@ if args.t or not os.path.isfile(PATH):
         ax.plot(epochs, trainAccuracyList, color="blue", label="Train Accuracy (%)")
         ax.plot(epochs, testAccuracyList, color="orange", label="Test Accuracy (%)")
         ax.plot(epochs, lossRates, color="green", label="loss")
-        fig.savefig(PROGRESS_GRAPH)
+        fig.savefig(PROGRESS_GRAPH, dpi=300)
         with open(PROGRESS_DATA, "wb") as binFile:
             pickle.dump(learningRate, binFile)
             pickle.dump(trainAccuracyList, binFile)
