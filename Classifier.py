@@ -75,8 +75,8 @@ def testModel(model, testLoader, getErrors=False):
             correct = (predicted == labels)
             totalCorrect += correct.sum().item()
             if getErrors and (correct.sum().item() != labels.size(0)):
-                ims = [i for i,v in zip(images.tolist(), correct.tolist()) if v]
-                lbs = [l for l,v in zip(labels.tolist(), correct.tolist()) if v]
+                ims = [i for i,v in zip(images.tolist(), correct.tolist()) if not v]
+                lbs = [l for l,v in zip(labels.tolist(), correct.tolist()) if not v]
                 errors.append([
                     torch.tensor(ims),
                     torch.tensor(lbs)
