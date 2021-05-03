@@ -20,8 +20,10 @@ PATH = f"{sys.path[0]}\\cifar_net.pth"
 PROGRESS_DATA = f"{sys.path[0]}\\progress.bin"
 PROGRESS_GRAPH = f"{sys.path[0]}\\plot.png"
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-MAX_EPOCHS = 200
+MAX_EPOCHS = 100
+ERROR_TRAIN_EPOCH = 0
 BATCH_SIZE = 64
+TEST_REPEATS = 1
 CLASSES = ("plane", "car", "bird", "cat", "deer", "dog", "frog", "horse", "ship", "truck")
 
 class Net(nn.Module):
@@ -60,16 +62,27 @@ class Net(nn.Module):
         return nn.Sequential(*layers)
 
 
-def testModel(model, testLoader):
-    correct = total = 0
+def testModel(model, testLoader, getErrors=False):
+    totalCorrect = total = 0
+    errors = []
+    model.eval()
     with torch.no_grad():
         for data in testLoader:
             images, labels = data[0].to(DEVICE), data[1].to(DEVICE)
             outputs = model(images)
             _, predicted = torch.max(outputs.data, 1)
             total += labels.size(0)
-            correct += (predicted == labels).sum().item()
-    return correct / total
+            correct = (predicted == labels)
+            totalCorrect += correct.sum().item()
+            if getErrors and (correct.sum().item() != labels.size(0)):
+                ims = [i for i,v in zip(images.tolist(), correct.tolist()) if v]
+                lbs = [l for l,v in zip(labels.tolist(), correct.tolist()) if v]
+                errors.append([
+                    torch.tensor(ims),
+                    torch.tensor(lbs)
+                ])
+    model.train()
+    return (totalCorrect / total, errors) if getErrors else (totalCorrect / total)
 
 def adjustLearningRate(optimizer):
     for param_group in optimizer.param_groups:
@@ -87,12 +100,14 @@ transform = transforms.Compose([
 
 trainset = torchvision.datasets.CIFAR10(root=f"{sys.path[0]}/data", train=True, download=True, transform=transform)
 trainloader = torch.utils.data.DataLoader(trainset, batch_size=BATCH_SIZE, shuffle=True, num_workers=0)
+errorLoader = [d for d in trainloader]
 
 testset = torchvision.datasets.CIFAR10(root=f"{sys.path[0]}/data", train=False, download=True, transform=transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))]))
 testloader = torch.utils.data.DataLoader(testset, batch_size=BATCH_SIZE, shuffle=False, num_workers=0)
 
 net = Net().to(DEVICE)
 
+loader = trainloader
 learningRate = 1e-3
 trainAccuracyList = [0]
 testAccuracyList = [0]
@@ -116,6 +131,7 @@ if os.path.isfile(PATH):
         testAccuracyList = pickle.load(binFile)
         lossRates = pickle.load(binFile)
         epochs = pickle.load(binFile)
+        learningRate *= 0.993**epochs[-1]
     print(f"Loaded state from: {PATH}")
 else:
     print("No load state. Creating new model.")
@@ -123,7 +139,7 @@ if args.t or not os.path.isfile(PATH):
     ax.plot(epochs, trainAccuracyList, color="blue", label="Train Accuracy (%)")
     ax.plot(epochs, testAccuracyList, color="orange", label="Test Accuracy (%)")
     ax.plot(epochs, lossRates, color="green", label="loss (100 * (1-loss))")
-    plt.legend(loc="upper left")
+    plt.legend(loc="lower right")
     fig.savefig(PROGRESS_GRAPH, dpi=300)
 
     trainingStart = time.time()
@@ -133,8 +149,10 @@ if args.t or not os.path.isfile(PATH):
     optimizer = torch.optim.Adam(net.parameters(), lr=learningRate)
 
     for epoch in range(epochs[-1]+1, MAX_EPOCHS):
+        if epoch > ERROR_TRAIN_EPOCH:
+            loader = errorLoader
         start = time.time()
-        for i, data in enumerate(trainloader):
+        for i, data in enumerate(loader):
             inputs, labels = data[0].to(DEVICE), data[1].to(DEVICE)
             optimizer.zero_grad()
             outputs = net(inputs)
@@ -142,8 +160,9 @@ if args.t or not os.path.isfile(PATH):
             loss.backward()
             optimizer.step()
 
-        accuracy = round(100 * sum([testModel(net, testloader) for _ in range(1)]), 2)
-        trainAccuracy = round(100 * sum([testModel(net, trainloader) for _ in range(1)]), 2)
+        accuracy = round((100 / TEST_REPEATS) * sum([testModel(net, testloader) for _ in range(TEST_REPEATS)]), 2)
+        trainAccuracy, errorLoader = testModel(net, trainloader, getErrors=True)
+        trainAccuracy = round(100 * trainAccuracy, 2)
 
         trainAccuracyList.append(trainAccuracy)
         testAccuracyList.append(accuracy)
@@ -171,7 +190,7 @@ if args.t or not os.path.isfile(PATH):
         
     print(f"\nFinished Training in {round(time.time() - trainingStart, 2)} seconds\n")
 
-
+model.eval()
 print(f"Accuracy of the network: {round(10 * sum([testModel(net, testloader) for _ in range(10)]), 2)}%\n")
 classCorrect = [0 for _ in CLASSES]
 classTotal = [0 for _ in CLASSES]
