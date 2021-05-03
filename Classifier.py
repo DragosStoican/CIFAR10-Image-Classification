@@ -190,7 +190,7 @@ if args.t or not os.path.isfile(PATH):
         
     print(f"\nFinished Training in {round(time.time() - trainingStart, 2)} seconds\n")
 
-model.eval()
+net.eval()
 print(f"Accuracy of the network: {round(10 * sum([testModel(net, testloader) for _ in range(10)]), 2)}%\n")
 classCorrect = [0 for _ in CLASSES]
 classTotal = [0 for _ in CLASSES]
