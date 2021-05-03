@@ -20,7 +20,7 @@ PATH = f"{sys.path[0]}\\cifar_net.pth"
 PROGRESS_DATA = f"{sys.path[0]}\\progress.bin"
 PROGRESS_GRAPH = f"{sys.path[0]}\\plot.png"
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-MAX_EPOCHS = 200
+MAX_EPOCHS = 100
 ERROR_TRAIN_EPOCH = 0
 BATCH_SIZE = 64
 TEST_REPEATS = 1
@@ -65,6 +65,7 @@ class Net(nn.Module):
 def testModel(model, testLoader, getErrors=False):
     totalCorrect = total = 0
     errors = []
+    model.eval()
     with torch.no_grad():
         for data in testLoader:
             images, labels = data[0].to(DEVICE), data[1].to(DEVICE)
@@ -80,6 +81,7 @@ def testModel(model, testLoader, getErrors=False):
                     torch.tensor(ims),
                     torch.tensor(lbs)
                 ])
+    model.train()
     return (totalCorrect / total, errors) if getErrors else (totalCorrect / total)
 
 def adjustLearningRate(optimizer):
@@ -188,7 +190,7 @@ if args.t or not os.path.isfile(PATH):
         
     print(f"\nFinished Training in {round(time.time() - trainingStart, 2)} seconds\n")
 
-
+model.eval()
 print(f"Accuracy of the network: {round(10 * sum([testModel(net, testloader) for _ in range(10)]), 2)}%\n")
 classCorrect = [0 for _ in CLASSES]
 classTotal = [0 for _ in CLASSES]
