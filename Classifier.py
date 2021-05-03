@@ -20,8 +20,8 @@ PATH = f"{sys.path[0]}\\cifar_net.pth"
 PROGRESS_DATA = f"{sys.path[0]}\\progress.bin"
 PROGRESS_GRAPH = f"{sys.path[0]}\\plot.png"
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-MAX_EPOCHS = 100
-ERROR_TRAIN_EPOCH = 0
+MAX_EPOCHS = 300
+ERROR_TRAIN_EPOCH = 999
 BATCH_SIZE = 64
 TEST_REPEATS = 1
 CLASSES = ("plane", "car", "bird", "cat", "deer", "dog", "frog", "horse", "ship", "truck")
@@ -75,8 +75,8 @@ def testModel(model, testLoader, getErrors=False):
             correct = (predicted == labels)
             totalCorrect += correct.sum().item()
             if getErrors and (correct.sum().item() != labels.size(0)):
-                ims = [i for i,v in zip(images.tolist(), correct.tolist()) if v]
-                lbs = [l for l,v in zip(labels.tolist(), correct.tolist()) if v]
+                ims = [i for i,v in zip(images.tolist(), correct.tolist()) if not v]
+                lbs = [l for l,v in zip(labels.tolist(), correct.tolist()) if not v]
                 errors.append([
                     torch.tensor(ims),
                     torch.tensor(lbs)
@@ -191,7 +191,7 @@ if args.t or not os.path.isfile(PATH):
     print(f"\nFinished Training in {round(time.time() - trainingStart, 2)} seconds\n")
 
 net.eval()
-print(f"Accuracy of the network: {round(10 * sum([testModel(net, testloader) for _ in range(10)]), 2)}%\n")
+print(f"Accuracy of the network: {round(100 * testModel(net, testloader), 2)}%\n")
 classCorrect = [0 for _ in CLASSES]
 classTotal = [0 for _ in CLASSES]
 with torch.no_grad():
