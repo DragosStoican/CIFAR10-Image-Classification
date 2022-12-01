@@ -1,1 +1,1 @@
-# Image-Classification-Group-Project
+# Cnn for classifying CIFAR10 images
